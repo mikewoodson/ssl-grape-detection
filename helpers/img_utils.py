@@ -23,16 +23,38 @@ def draw_gt(dset, gt_type, save_path):
             draw_fn = draw_keypoints
         draw_fn(resultImg, annotations, save_path/f'{gt_type}-{fname}')
 
-def draw_boxes(img, boxes, save_path, box_colors=None):
+def draw_rectangle(img, box, color, line_style, width):
     draw = ImageDraw.Draw(img)
+    color = (0,0,255)
+    if line_style == 'dash':
+        x0 = int(box[0])
+        y0 = int(box[1])
+        x1 = int(box[2])
+        y1 = int(box[3])
+        for x in range(x0, x1, 12):
+            draw.line([(x, y0), (x + 1, y0)], fill=color, width=width)
+        for x in range(x0, x1, 12):
+            draw.line([(x, y1), (x + 1, y1)], fill=color, width=width)
+        for y in range(y0, y1, 12):
+            draw.line([(x0, y), (x0, y + 1)], fill=color, width=width)
+        for y in range(y0, y1, 12):
+            draw.line([(x1, y), (x1, y + 1)], fill=color, width=width)
+    else:
+        draw.rectangle(box, outline=color, width=width)
+
+
+def draw_boxes(img, boxes, save_path, box_colors=None, line_styles=None):
     w, h = img.size
     width = int(0.000004 * (w * h))
     for idx, box in enumerate(boxes):
-        color = (255,255,255)
+        color = (0,0,255)
+        line_style = 'solid'
         if box_colors is not None:
             color = box_colors[idx]
+        if line_styles is not None:
+            line_style = line_styles[idx]
         box = list(np.array(box))
-        draw.rectangle(box, outline=color, width=width)
+        draw_rectangle(img, box, color, line_style, width)
 
     parent_dir = save_path.parent
     if not parent_dir.exists():
@@ -62,6 +84,7 @@ def draw_result(img, output, target, confidence, iou_thresh, save_path):
     box_colors = None
     if target_boxes is not None:
         box_colors = [(255, 0, 0)] * len(top_boxes)
+        line_styles = ['dash'] * len(top_boxes)
         gt_matched = [False] * len(target_boxes)
         iou_matrix = box_iou(top_boxes, target['boxes'])
 
@@ -74,6 +97,7 @@ def draw_result(img, output, target, confidence, iou_thresh, save_path):
                     iou = iou_matrix[row, col]
             if match_idx != -1:
                 box_colors[row] = (0, 0, 255)
+                line_styles[row] = 'solid'
                 gt_matched[match_idx] = True
 
-    draw_boxes(img, top_boxes, save_path, box_colors)
+    draw_boxes(img, top_boxes, save_path, box_colors, line_styles)
